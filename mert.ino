@@ -9,13 +9,14 @@
 #define ENCODER_A_PIN 2
 #define ENCODER_B_PIN 3
 
-#define ENCODER_CPR 1000
+#define ENCODER_CPR 2400.
 #define POT_MIN 10
 #define POT_MAX 1000
-#define LEAD_LOOPS 20
-// Motor Rotation per lead rotation
-#define MRPLR 10
-#define HOMING_SPEED 0.1
+#define HOMING_SPEED 30
+
+#define SCREW_PITCH_MM 5.
+#define SCREW_LEN_MM 50
+#define GEAR_RATIO 6.
 
 
 // ENCODER
@@ -59,6 +60,46 @@ void reset_encoder() {
 
 
 
+// SPEED READING
+unsigned long last_motor_speed_update = 0;
+unsigned long motor_speed_read_interval = 10;
+long last_encoder_reading = 0;
+float current_rpm = 0;
+
+void update_speed() {
+  if (last_motor_speed_update == 0) {
+    last_motor_speed_update = millis();
+    last_encoder_reading = read_encoder();
+    return;
+  }
+
+  unsigned long elapsed = millis() - last_motor_speed_update;
+  if (elapsed > motor_speed_read_interval) {
+      float rotation = (read_encoder() - last_encoder_reading) / ENCODER_CPR;
+      current_rpm = rotation / (elapsed / 1000.) * 60.;
+
+      // Serial.print(read_encoder());
+      // Serial.print(" ");
+      // Serial.print(last_encoder_reading);
+      // Serial.print(" ");
+      // Serial.print(rotation);
+      // Serial.print(" ");
+      // Serial.print(current_rpm);
+      // Serial.print(" ");
+      // Serial.println(elapsed/1000.);
+      
+      last_motor_speed_update = millis();
+      last_encoder_reading = read_encoder();
+  }
+}
+
+float get_rpm() {
+  return current_rpm;
+}
+
+// SPEED READING END
+
+
 // LCD STUFF
 LiquidCrystal_I2C lcd(0x27, 20, 4);
 unsigned long last_lcd_update = 0;
@@ -69,37 +110,34 @@ void lcd_setup() {
   lcd.backlight();
 
   lcd.setCursor(0, 0);
-  lcd.print("Please initialize");
+  lcd.print("Please press");
   lcd.setCursor(0, 1);
-  lcd.print("the system by");
+  lcd.print("the button");
+
   lcd.setCursor(0, 2);
-  lcd.print("pressing the");
+  lcd.print("Speed: ");
   lcd.setCursor(0, 3);
-  lcd.print("button");
+  lcd.print(get_pot_input());
 }
 
-void lcd_update(float val1, float val2, float val3, float val4) {
+void lcd_update(float val1, float val2, float val3) {
   if (millis() - last_lcd_update < lcd_update_interval) {
     return;
   }
   last_lcd_update = millis();
 
   // lcd.clear();
-  lcd.setCursor(0, 0);
+  lcd.setCursor(0, 1);
   lcd.print("Speed Input: ");
   lcd.print(val1, 2);
   
-  lcd.setCursor(0, 1);
-  lcd.print("Encoder: ");
+  lcd.setCursor(0, 2);
+  lcd.print("Motor RPM: ");
   lcd.print(val2);
   
-  lcd.setCursor(0, 2);
-  lcd.print("Tuna siki (mm): ");
-  lcd.print(24);
-
   lcd.setCursor(0, 3);
-  lcd.print("Mert siki (km): ");
-  lcd.print(9);
+  lcd.print("Screw Pos: ");
+  lcd.print(val3);
 
 }
 // LCD END
@@ -137,8 +175,28 @@ float is_limit_switch_pressed() {
   return digitalRead(LIMIT_SWITCH_PIN);
 }
 
-void home_system() {
+float get_rotation() {
+  return read_encoder() / ENCODER_CPR;
+}
 
+float get_output_length() {
+  return get_rotation() / GEAR_RATIO * SCREW_PITCH_MM;
+}
+
+void home_system() {
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Homing...");
+  lcd.setCursor(0, 1);
+  lcd.print("Motor Speed: ");
+  lcd.print(HOMING_SPEED);
+
+  while (!is_limit_switch_pressed()) {
+    Serial.println("Waiting for limit switch");
+    delay(10);
+  }
+
+  reset_encoder();
 }
 
 void setup() {
@@ -156,16 +214,18 @@ void setup() {
   // tuş basılana kadar bekle
   while (!is_button_pressed()) {
     Serial.println("Waiting for button!");
+    lcd.setCursor(0, 3);
+    lcd.print(get_pot_input());
     delay(10);
   }
-  // home_system();
+  home_system();
 
-  // tekrar tuş basılana kadar bekle
-  // while
+  lcd.clear();
 }
 
 void loop() {
   float speed_input = get_pot_input();
-  lcd_update(speed_input, read_encoder(), 0, 0);
-  Serial.println(is_limit_switch_pressed());
+  lcd_update(speed_input, get_rpm(), get_output_length());
+
+  update_speed();
 }
