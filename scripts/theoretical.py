@@ -61,7 +61,7 @@ def get_motor_torque(current):
     =>  torque = (I - no_load_current) / current_slope
     """
     torque = (current - no_load_current) / current_slope
-    return apply_jitter(torque, 0.1)
+    return apply_jitter(torque, 0.02)
 
 
 def get_motor_rpm(current):
@@ -73,7 +73,7 @@ def get_motor_rpm(current):
     """
     torque = get_motor_torque(current)
     rpm = no_load_speed - motor_reg * torque
-    return apply_jitter(rpm, 0.1)
+    return apply_jitter(rpm, 0.02)
 
 
 def get_motor_power(current):
