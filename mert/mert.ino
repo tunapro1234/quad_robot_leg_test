@@ -165,6 +165,23 @@ void set_motor_speed(int spd) {
 // VICTOR SPX END
 
 
+// ANGLE CALCULATIONS
+#define LEG_L1 75
+#define LEG_L2 30
+#define LEG_Y 10
+#define LEG_DMAX 40
+
+float calculate_leg_angle(float screw_position) {
+  float d1 = LEG_DMAX - screw_position;
+  float l3 = sqrt(pow(d1, 2) + pow(LEG_Y, 2));
+
+  float beta = tan(d1/LEG_Y);
+  float alpha = acos( (pow(LEG_L2, 2) + pow(l3, 2) - pow(LEG_L1, 2)) / (2 * LEG_L2 * l3));
+  return M_PI/2 - alpha + beta;
+}
+// ANGLE CALCULATIONS END
+
+
 // GENERAL FUNCTIONS
 float get_pot_input() {
   float speed_input = map(analogRead(SPEED_POT_PIN), POT_MIN, POT_MAX, -255, 255);
@@ -239,6 +256,7 @@ void loop() {
   }
   set_motor_speed(speed_input);
 
-  lcd_update(speed_input, get_rpm(), get_output_length(), 0.);
+  float screw_pos = get_output_length();
+  lcd_update(speed_input, get_rpm(), screw_pos, calculate_leg_angle(screw_pos));
   update_speed();
 }
