@@ -1,5 +1,7 @@
-import numpy as np
+# from scipy.interpolate import UnivariateSpline
+from scipy.ndimage import gaussian_filter1d
 import matplotlib.pyplot as plt
+import numpy as np
 import math
 import time
 import os
@@ -159,40 +161,92 @@ def get_screw_force(torque):
 
 # -- Test ve data toplama --
 
-def create_and_save_graph(x, y, filename, title="Graph", xlabel="X-axis", ylabel="Y-axis"):
+def moving_average(data, window_size):
+    """
+    Hareketli ortalama yöntemi ile yumuşatma uygular.
+    
+    Parametreler:
+      data        : Orijinal veri (numpy array veya liste)
+      window_size : Ortalama için pencere boyutu (ör. 3, 5, ...)
+    
+    Return:
+      Yumuşatılmış veri (numpy array)
+    """
+    return np.convolve(data, np.ones(window_size)/window_size, mode='valid')
+
+
+def create_and_save_graph(x, y, filename, title="Graph", xlabel="X-axis", ylabel="Y-axis", smooth=True, sigma=3):
     """
     Verilen x ve y veri dizilerinden bir grafik oluşturur, grafiği
     belirtilen dosya adıyla kaydeder (örn: 'graph.png') ve aynı zamanda
     veri noktalarını bir txt dosyasına yazar (örn: 'graph.txt').
     
+    Opsiyonel olarak çizgiyi spline interpolasyonu ile yumuşatır.
+    
     Parametreler:
-      x        : X ekseni veri dizisi (list, numpy array, vb.)
-      y        : Y ekseni veri dizisi (list, numpy array, vb.)
-      filename : Kaydedilecek grafik dosyasının adı (örn. "graph.png").
-      title    : Grafik başlığı (varsayılan "Graph")
-      xlabel   : X eksen etiketi (varsayılan "X-axis")
-      ylabel   : Y eksen etiketi (varsayılan "Y-axis")
+      x            : X ekseni veri dizisi (list, numpy array, vb.)
+      y            : Y ekseni veri dizisi (list, numpy array, vb.)
+      filename     : Kaydedilecek grafik dosyasının adı (örn: "graph.png").
+      title        : Grafik başlığı (varsayılan "Graph")
+      xlabel       : X eksen etiketi (varsayılan "X-axis")
+      ylabel       : Y eksen etiketi (varsayılan "Y-axis")
+      smooth       : True ise spline interpolasyonu kullanarak çizgiyi yumuşatır.
+      smooth_factor: Spline yumuşatma derecesi (0 daha keskin, büyük değerler daha pürüzsüz).
     """
-    # Grafik oluşturma ve kaydetme
+    x = np.array(x.copy())
+    y = np.array(y.copy())
+
+    sorted_indices = np.argsort(x)  # x'in sıralı indekslerini alın
+    x = x[sorted_indices]           # x sıralı hale getirildi
+    y = y[sorted_indices]           # y aynı sıraya göre düzenlendi
+
     plt.figure()
-    plt.plot(x, y, marker='o', linestyle='-', color='blue', label="Data")
+
+    # Orijinal veri noktalarını göster
+    plt.plot(x, y, 'o', color='blue', label="Data Points")  # Noktalar (mavi)
+
+    if smooth:
+        # # UnivariateSpline ile daha fazla yumuşatma
+        # spline = UnivariateSpline(x, y, s=smooth_factor)  # s: yumuşatma parametresi
+        # x_new = np.linspace(min(x), max(x), 500)          # Daha fazla ara nokta üret
+        # y_smooth = spline(x_new)
+
+        # # Yumuşatılmış çizgi
+        # plt.plot(x_new, y_smooth, color='red', label="Smoothed Curve", linewidth=2)
+
+        # # Moving Average ile yumuşatma
+        # y_smooth = moving_average(y, window_size)
+        # # X değerlerini de aynı şekilde kısalt (yeni pencerelere uyumlu hale getirmek için)
+        # x_smooth = x[:len(y_smooth)]
+        
+        # # Yumuşatılmış çizgi
+        # plt.plot(x_smooth, y_smooth, color='red', label="Smoothed Curve", linewidth=2)
+
+        # Gaussian filtre uygulama
+        y_smooth = gaussian_filter1d(y, sigma=sigma)
+
+        # Yumuşatılmış çizgi
+        plt.plot(x, y_smooth, color='red', label="Gaussian Smoothed Curve", linewidth=2)
+
+
+
+    # Eksen ve başlık
     plt.xlabel(xlabel)
     plt.ylabel(ylabel)
     plt.title(title)
     plt.grid(True)
     plt.legend()
     
+    # Grafik kaydetme
     plt.savefig(filename, bbox_inches="tight")
     plt.close()
     print(f"Grafik '{filename}' olarak kaydedildi.")
 
-    # Dosya ismini bölerek .txt uzantılı dosya adı oluşturma
+    # Txt dosyası oluşturma
     base_name, _ = os.path.splitext(filename)
     data_filename = base_name + ".txt"
-    
-    # Veri noktalarını txt dosyasına yazma
     with open(data_filename, "w") as file:
-        file.write("x\ty\n")  # Başlık satırı
+        file.write("x\ty\n")
         for xi, yi in zip(x, y):
             file.write(f"{xi}\t{yi}\n")
     print(f"Veri noktaları '{data_filename}' dosyasına yazıldı.")
