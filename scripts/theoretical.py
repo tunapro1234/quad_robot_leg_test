@@ -1,5 +1,8 @@
+# import numpy as np
+import matplotlib.pyplot as plt
 import math
 import time
+import os
 
 
 encoder_cpr = 2400
@@ -8,9 +11,9 @@ screw_len_mm = 50
 gear_ratio = 6.
 
 # simülasyon döngü süresi (ms)
-update_interval_ms = 1000
+update_interval_ms_g = 1000
 # simülasyonun gerçek hayattan kaç kat hızlı çalışacağı
-loop_time_multiplier = 1
+loop_time_multiplier_g = 1
 
 M_PI = 3.14159265358979323846
 
@@ -144,8 +147,57 @@ def get_screw_speed(rpm):
     return rpm / 60 * screw_pitch_mm / gear_ratio
 
 
+def get_screw_force(torque):
+    screw_torque_mNm = torque * gear_ratio
+    screw_torque_Nm = screw_torque_mNm * 0.001           # mNm → N·m
+    pitch_m = screw_pitch_mm * 0.001                     # mm → m
+    force_N = (2 * math.pi * screw_torque_Nm) / pitch_m  # F = 2πT / p
+    return force_N
 
-def main_test():
+
+
+# -- Test ve data toplama --
+
+def create_and_save_graph(x, y, filename, title="Graph", xlabel="X-axis", ylabel="Y-axis"):
+    """
+    Verilen x ve y veri dizilerinden bir grafik oluşturur, grafiği
+    belirtilen dosya adıyla kaydeder (örn: 'graph.png') ve aynı zamanda
+    veri noktalarını bir txt dosyasına yazar (örn: 'graph.txt').
+    
+    Parametreler:
+      x        : X ekseni veri dizisi (list, numpy array, vb.)
+      y        : Y ekseni veri dizisi (list, numpy array, vb.)
+      filename : Kaydedilecek grafik dosyasının adı (örn. "graph.png").
+      title    : Grafik başlığı (varsayılan "Graph")
+      xlabel   : X eksen etiketi (varsayılan "X-axis")
+      ylabel   : Y eksen etiketi (varsayılan "Y-axis")
+    """
+    # Grafik oluşturma ve kaydetme
+    plt.figure()
+    plt.plot(x, y, marker='o', linestyle='-', color='blue', label="Data")
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.grid(True)
+    plt.legend()
+    
+    plt.savefig(filename, bbox_inches="tight")
+    plt.close()
+    print(f"Grafik '{filename}' olarak kaydedildi.")
+
+    # Dosya ismini bölerek .txt uzantılı dosya adı oluşturma
+    base_name, _ = os.path.splitext(filename)
+    data_filename = base_name + ".txt"
+    
+    # Veri noktalarını txt dosyasına yazma
+    with open(data_filename, "w") as file:
+        file.write("x\ty\n")  # Başlık satırı
+        for xi, yi in zip(x, y):
+            file.write(f"{xi}\t{yi}\n")
+    print(f"Veri noktaları '{data_filename}' dosyasına yazıldı.")
+
+
+def main_test(update_interval_ms, loop_time_multiplier):
     last_time = time.time()
     while True:
         # interval dolana kadar bekle
@@ -185,7 +237,73 @@ def main_test():
         print(f"Efficiency: {eff}, ")
 
 
+def collect_data(update_interval_ms, loop_time_multiplier, current_step_per_sec):
+    total_power_consumption = 0
+    powers = []
+    torques = []
+    power_consumptions = []
+    times = []
+    rpms = []
+
+    # başlangıç akımımız 3 amper
+    set_motor_current(3)
+
+    last_time = time.time()
+    while motor_current_g < 40:
+        # interval dolana kadar bekle
+        elapsed = time.time() - last_time
+        while elapsed * 1000 < update_interval_ms:
+            elapsed = time.time() - last_time
+
+        sim_elapsed = (time.time() - last_time) * loop_time_multiplier
+        last_time = time.time()
+        # interval işleri son
+
+        # akımı zamanla arttır
+        try:
+            set_motor_current(motor_current_g + current_step_per_sec*sim_elapsed)        
+        except ValueError:
+            break
+        update_motor(sim_elapsed)
+
+        powers.append(get_motor_power(motor_current_g))
+        torques.append(get_motor_torque(motor_current_g))
+        rpms.append(get_motor_rpm(motor_current_g))
+
+        times.append(sim_elapsed)
+        total_power_consumption += powers[-1] * sim_elapsed
+        power_consumptions.append(total_power_consumption)
+
+    return powers, torques, rpms, times, power_consumptions
+
+
+def main():
+    powers, torques, rpms, times, power_consumptions = collect_data(10, 10, 10)
+    print("Power vs Time")
+    print(*zip(powers, times), sep="\n")
+    create_and_save_graph(times, powers, "power_vs_time.png", "Power vs Time", "Time (s)", "Power (W)")
+
+    print("Power vs Torque")
+    print(*zip(powers, torques), sep="\n")
+    create_and_save_graph(torques, powers, "power_vs_torque.png", "Power vs Torque", "Torque (mNm)", "Power (W)")
+
+    print("Power Cons vs Torque")
+    print(*zip(power_consumptions, torques), sep="\n")
+    create_and_save_graph(torques, power_consumptions, "power_cons_vs_torque.png", "Power Consumption vs Torque", "Torque (mNm)", "Power Consumption (J)")
+
+    print("Power Cons vs Screw Speed")
+    screw_speeds = [get_screw_speed(rpm) for rpm in rpms] 
+    print(*zip(power_consumptions, screw_speeds), sep="\n")
+    create_and_save_graph(screw_speeds, power_consumptions, "power_cons_vs_screw_speed.png", "Power Consumption vs Screw Speed", "Screw Speed (mm/s)", "Power Consumption (J)")
+
+    print("Screw Force vs Screw Speed")
+    screw_forces = [get_screw_force(torque) for torque in torques]
+    print(*zip(screw_forces, screw_speeds), sep="\n")
+    create_and_save_graph(screw_speeds, screw_forces, "screw_force_vs_screw_speed.png", "Screw Force vs Screw Speed", "Screw Speed (mm/s)", "Screw Force (N)")
+
 
 
 if __name__ == "__main__":
-   main_test()
+#    main_test(10, 10, 10)
+#    power_vs_torque(10, 10, 10)
+    main()
