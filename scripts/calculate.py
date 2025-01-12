@@ -1,6 +1,7 @@
 import math
 import time
 
+
 encoder_cpr = 2400
 screw_pitch_mm = 5.
 screw_len_mm = 50
@@ -102,7 +103,7 @@ def set_motor_current(current):
     global motor_current_g
     motor_current_g = current
 
-    if -30 > motor_current_g or motor_current_g > 30 :
+    if -40 > motor_current_g or motor_current_g > 40:
         raise ValueError("Motor current out of range")
 
 
@@ -118,7 +119,7 @@ def update_motor(delta_time):
 
 
 
-# -- Leg kısmı --
+# -- Mekanizma hesapları --
 
 # leg parametreleri
 leg_l1 = 75
@@ -135,11 +136,16 @@ def calculate_leg_angle(screw_position):
   return M_PI/2 - alpha + beta
 
 
-def get_screw_displacement(ticks):
+def get_screw_pos(ticks):
   return ticks_to_rot(ticks) / gear_ratio * screw_pitch_mm
 
 
-def main():
+def get_screw_speed(rpm):
+    return rpm / 60 * screw_pitch_mm / gear_ratio
+
+
+
+def main_test():
     last_time = time.time()
     while True:
         # interval dolana kadar bekle
@@ -151,19 +157,25 @@ def main():
         last_time = time.time()
         # interval işleri son
 
+        ### MERT BURAYA BAK MOTORA BURDAN AKIM VREİYOSUN, 
+        ### 40 AMPERDEN FAZLA VERİRSEN MOTORUN KALBİNİ KIRARSIN
         set_motor_current(30)
         update_motor(sim_elapsed)
         
-        dt = sim_elapsed
+        # dt = sim_elapsed
         encr = encoder_reading_g
         current = get_motor_current()
         rpm = get_motor_rpm(current)
         torque = get_motor_torque(current)
         eff = get_motor_efficiency(current)
 
+        screw_pos = get_screw_pos(encr)
+        screw_speed = get_screw_speed(rpm)
+        
         print(f" ------------------- ")
         print(f"Encoder: {encr}, ")
-        print(f"Screw: {get_screw_displacement(encr)}, ")
+        print(f"Screw: {screw_pos}, ")
+        print(f"Screw speed: {screw_speed}, ")
 
         print(f"Current: {current}, ")
         print(f"Motor RPM: {rpm}, ")
@@ -176,4 +188,4 @@ def main():
 
 
 if __name__ == "__main__":
-   main()
+   main_test()
