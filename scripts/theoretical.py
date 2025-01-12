@@ -1,4 +1,4 @@
-# import numpy as np
+import numpy as np
 import matplotlib.pyplot as plt
 import math
 import time
@@ -237,6 +237,25 @@ def main_test(update_interval_ms, loop_time_multiplier):
         print(f"Efficiency: {eff}, ")
 
 
+def apply_jitter(value, percent):
+    """
+    Verilen value sayısını, ± percent aralığında rastgele oynar.
+    
+    Örnek: value = 100, percent = 0.1 ise, değer 90 ile 110 arasında bir
+    değere rastgele ayarlanır.
+    
+    Parametreler:
+      value   : Orijinal sayı
+      percent : Maksimum oynama oranı (örn. %10 için 0.1)
+    
+    Return:
+      Rastgele oynanmış değer.
+    """
+    # -percent ile +percent arasında rastgele bir oran belirlenir.
+    delta = np.random.uniform(-percent, percent)
+    return value * (1 + delta)
+
+
 def collect_data(update_interval_ms, loop_time_multiplier, current_step_per_sec):
     total_power_consumption = 0
     powers = []
@@ -261,7 +280,7 @@ def collect_data(update_interval_ms, loop_time_multiplier, current_step_per_sec)
 
         # akımı zamanla arttır
         try:
-            set_motor_current(motor_current_g + current_step_per_sec*sim_elapsed)        
+            set_motor_current(motor_current_g + apply_jitter(current_step_per_sec*sim_elapsed, 0.5))
         except ValueError:
             break
         update_motor(sim_elapsed)
@@ -278,11 +297,7 @@ def collect_data(update_interval_ms, loop_time_multiplier, current_step_per_sec)
 
 
 def main():
-    powers, torques, rpms, times, power_consumptions = collect_data(10, 10, 10)
-    print("Power vs Time")
-    print(*zip(powers, times), sep="\n")
-    create_and_save_graph(times, powers, "power_vs_time.png", "Power vs Time", "Time (s)", "Power (W)")
-
+    powers, torques, rpms, _, power_consumptions = collect_data(10, 10, 10)
     print("Power vs Torque")
     print(*zip(powers, torques), sep="\n")
     create_and_save_graph(torques, powers, "power_vs_torque.png", "Power vs Torque", "Torque (mNm)", "Power (W)")
