@@ -120,24 +120,28 @@ void lcd_setup() {
   lcd.print(get_pot_input());
 }
 
-void lcd_update(float val1, float val2, float val3) {
+void lcd_update(float val1, float val2, float val3, float val4) {
   if (millis() - last_lcd_update < lcd_update_interval) {
     return;
   }
   last_lcd_update = millis();
 
   // lcd.clear();
-  lcd.setCursor(0, 1);
+  lcd.setCursor(0, 0);
   lcd.print("Speed Input: ");
   lcd.print(val1, 2);
   
-  lcd.setCursor(0, 2);
+  lcd.setCursor(0, 1);
   lcd.print("Motor RPM: ");
   lcd.print(val2);
   
-  lcd.setCursor(0, 3);
+  lcd.setCursor(0, 2);
   lcd.print("Screw Pos: ");
   lcd.print(val3);
+  
+  lcd.setCursor(0, 3);
+  lcd.print("Leg Angle: ");
+  lcd.print(val4);
 
 }
 // LCD END
@@ -158,10 +162,10 @@ void set_motor_speed(int spd) {
   int pwm_value = map(spd, -255, 255, PWM_MIN, PWM_MAX);
   victor_spx.writeMicroseconds(pwm_value);
 }
-
 // VICTOR SPX END
 
 
+// GENERAL FUNCTIONS
 float get_pot_input() {
   float speed_input = map(analogRead(SPEED_POT_PIN), POT_MIN, POT_MAX, -255, 255);
   return min(255, max(-255, speed_input));
@@ -192,7 +196,7 @@ void home_system() {
   lcd.print(HOMING_SPEED);
 
   while (!is_limit_switch_pressed()) {
-    Serial.println("Waiting for limit switch");
+    // Serial.println("Waiting for limit switch");
     delay(10);
   }
 
@@ -213,7 +217,7 @@ void setup() {
 
   // tuş basılana kadar bekle
   while (!is_button_pressed()) {
-    Serial.println("Waiting for button!");
+    // Serial.println("Waiting for button!");
     lcd.setCursor(0, 3);
     lcd.print(get_pot_input());
     delay(10);
@@ -225,7 +229,16 @@ void setup() {
 
 void loop() {
   float speed_input = get_pot_input();
-  lcd_update(speed_input, get_rpm(), get_output_length());
 
+  // motor hız ayarlaması
+  if (get_output_length() >= SCREW_LEN_MM) {
+    speed_input = min(0, speed_input);
+  }
+  if (get_output_length() <= -SCREW_LEN_MM) {
+    speed_input = max(0, speed_input);
+  }
+  set_motor_speed(speed_input);
+
+  lcd_update(speed_input, get_rpm(), get_output_length(), 0.);
   update_speed();
 }
