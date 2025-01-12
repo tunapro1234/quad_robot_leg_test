@@ -29,3 +29,11 @@ tarzında kullandım, percentage azaltırsın istersen
 grafiklerde jitter uygulanmış noktaları yumuşatmak için moving average, gaussian ve adını unuttğum 2 şey daha denedim
 bence en güzeli gaussian ama beğenmezsen data pointleri alıp matlabde istediğin gibi değiştirebilirsin
 
+### data
+eğer daha çok data toplamak istersen data pointleri kenara kaydedip kodu birkaç kez tekrar çalıştırabilirsin, jitterda rastgelelik olduğu için
+her seferinde ufak değişiklikler olacak datalarda, baya havalı şeyler yapabilirsin onlarla
+
+main() fonskiyonu içinde collect_data var, collect_data(1, 10, 1) falan yaparsan çalışma başına çok daha fazla data alabilirsin
+collect_data(10, 10, 10) yaparsan da daha az data topluyon haberin olsun istersen daha çok da arttırabilirsin
+
+Bİ DE bence lineer bir correlation olmasını gerektiğini bildiğin şeylere lineer regresyon oturtabilirsin tatlı görünür.

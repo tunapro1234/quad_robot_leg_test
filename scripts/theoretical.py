@@ -352,7 +352,7 @@ def collect_data(update_interval_ms, loop_time_multiplier, current_step_per_sec)
 
 
 def main():
-    powers, torques, rpms, _, power_consumptions = collect_data(10, 10, 10)
+    powers, torques, rpms, _, power_consumptions = collect_data(8, 10, 8)
     print("Power vs Torque")
     print(*zip(powers, torques), sep="\n")
     create_and_save_graph(torques, powers, "power_vs_torque.png", "Power vs Torque", "Torque (mNm)", "Power (W)")
