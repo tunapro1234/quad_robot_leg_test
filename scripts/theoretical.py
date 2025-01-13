@@ -62,7 +62,7 @@ def get_motor_torque(current):
         I = no_load_current + current_slope * torque
     =>  torque = (I - no_load_current) / current_slope
     """
-    torque = (current - no_load_current) / current_slope / 1000
+    torque = (current - no_load_current) / current_slope
     return apply_jitter(torque, 0.1)
 
 
@@ -75,7 +75,7 @@ def get_motor_rpm(current):
     """
     torque = get_motor_torque(current)
     rpm = no_load_speed - motor_reg * torque
-    return apply_jitter(rpm, 0.00003)
+    return apply_jitter(rpm, 0.05)
 
 
 def get_motor_power(current):
@@ -89,7 +89,7 @@ def get_motor_power_dt(current, delta_time):
 
 
 def get_motor_power_output(current):
-    torque_nm = get_motor_torque(current)
+    torque_nm = get_motor_torque(current) / 1000
     rpm = get_motor_rpm(current)
     omega_rad_s = 2.0 * math.pi * (rpm / 60.0)
     return torque_nm * omega_rad_s
@@ -147,12 +147,12 @@ def get_screw_pos(ticks):
 
 
 def get_screw_speed(rpm):
-    # return m/s
-    mms = rpm / 60 * screw_pitch_mm / gear_ratio
-    return mms / 1000
+    # return mm/s
+    return rpm / 60 * screw_pitch_mm / gear_ratio
 
 
-def get_screw_force(torque_nm):
+def get_screw_force(torque):
+    torque_nm = torque / 1000
     screw_torque_Nm = torque_nm * gear_ratio
     pitch_m = screw_pitch_mm * 0.001                     # mm → m
     force_N = (2 * math.pi * screw_torque_Nm) / pitch_m  # F = 2πT / p
@@ -356,33 +356,33 @@ def main():
     powers, torques, rpms, _, power_consumptions = collect_data(8, 10, 8)
     print("RPM vs Torque")
     print(*zip(rpms, torques), sep="\n")
-    create_and_save_graph(torques, rpms, "rpm_vs_torque.png", "RPM vs Torque", "Torque (Nm)", "RPM")
+    create_and_save_graph(torques, rpms, "rpm_vs_torque.png", "RPM vs Torque", "Torque (mNm)", "RPM")
 
     print("Power vs Torque")
     print(*zip(powers, torques), sep="\n")
-    create_and_save_graph(torques, powers, "power_vs_torque.png", "Power vs Torque", "Torque (Nm)", "Power (W)")
+    create_and_save_graph(torques, powers, "power_vs_torque.png", "Power vs Torque", "Torque (mNm)", "Power (W)")
 
     print("Power Cons vs Torque")
     print(*zip(power_consumptions, torques), sep="\n")
-    create_and_save_graph(torques, power_consumptions, "power_cons_vs_torque.png", "Power Consumption vs Torque", "Torque (Nm)", "Power Consumption (J)")
+    create_and_save_graph(torques, power_consumptions, "power_cons_vs_torque.png", "Power Consumption vs Torque", "Torque (mNm)", "Power Consumption (J)")
 
     print("Power Cons vs Screw Speed")
     screw_speeds = [get_screw_speed(rpm) for rpm in rpms] 
     print(*zip(power_consumptions, screw_speeds), sep="\n")
-    create_and_save_graph(screw_speeds, power_consumptions, "power_cons_vs_screw_speed.png", "Power Consumption vs Screw Speed", "Screw Speed (m/s)", "Power Consumption (J)")
+    create_and_save_graph(screw_speeds, power_consumptions, "power_cons_vs_screw_speed.png", "Power Consumption vs Screw Speed", "Screw Speed (mm/s)", "Power Consumption (J)")
 
     print("Power vs Screw Speed")
     print(*zip(powers, screw_speeds), sep="\n")
-    create_and_save_graph(screw_speeds, powers, "power_vs_screw_speed.png", "Power vs Screw Speed", "Screw Speed (m/s)", "Power (W)")
+    create_and_save_graph(screw_speeds, powers, "power_vs_screw_speed.png", "Power vs Screw Speed", "Screw Speed (mm/s)", "Power (W)")
 
     print("RPM vs Screw Speed")
     print(*zip(rpms, screw_speeds), sep="\n")
-    create_and_save_graph(screw_speeds, rpms, "rpm_vs_screw_speed.png", "RPM vs Screw Speed", "Screw Speed (m/s)", "RPM")
+    create_and_save_graph(screw_speeds, rpms, "rpm_vs_screw_speed.png", "RPM vs Screw Speed", "Screw Speed (mm/s)", "RPM")
 
     print("Screw Force vs Screw Speed")
     screw_forces = [get_screw_force(torque) for torque in torques]
     print(*zip(screw_forces, screw_speeds), sep="\n")
-    create_and_save_graph(screw_speeds, screw_forces, "screw_force_vs_screw_speed.png", "Screw Force vs Screw Speed", "Screw Speed (m/s)", "Screw Force (N)")
+    create_and_save_graph(screw_speeds, screw_forces, "screw_force_vs_screw_speed.png", "Screw Force vs Screw Speed", "Screw Speed (mm/s)", "Screw Force (N)")
 
 
 
