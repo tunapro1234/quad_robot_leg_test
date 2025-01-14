@@ -194,6 +194,11 @@ def create_and_save_graph(x, y, filename, title="Graph", xlabel="X-axis", ylabel
       smooth       : True ise spline interpolasyonu kullanarak çizgiyi yumuşatır.
       smooth_factor: Spline yumuşatma derecesi (0 daha keskin, büyük değerler daha pürüzsüz).
     """
+
+    output_folder = "graphs and data"
+    os.makedirs(output_folder, exist_ok=True)
+    filename = os.path.join(output_folder, filename)
+
     x = np.array(x.copy())
     y = np.array(y.copy())
 
@@ -204,7 +209,8 @@ def create_and_save_graph(x, y, filename, title="Graph", xlabel="X-axis", ylabel
     plt.figure()
 
     # Orijinal veri noktalarını göster
-    plt.plot(x, y, 'o', color='blue', label="Data Points")  # Noktalar (mavi)
+    # plt.plot(x, y, 'o', color='blue', label="Data Points")  # Noktalar (mavi)
+    plt.plot(x, y, marker='o', linestyle='-', color='blue', label="Data")
 
     if smooth:
         # # UnivariateSpline ile daha fazla yumuşatma
@@ -224,12 +230,11 @@ def create_and_save_graph(x, y, filename, title="Graph", xlabel="X-axis", ylabel
         # plt.plot(x_smooth, y_smooth, color='red', label="Smoothed Curve", linewidth=2)
 
         # Gaussian filtre uygulama
-        y_smooth = gaussian_filter1d(y, sigma=sigma)
+        # y_smooth = gaussian_filter1d(y, sigma=sigma)
 
         # Yumuşatılmış çizgi
-        plt.plot(x, y_smooth, color='red', label="Gaussian Smoothed Curve", linewidth=2)
-
-
+        # plt.plot(x, y_smooth, color='red', label="Gaussian Smoothed Curve", linewidth=2)
+        pass
 
     # Eksen ve başlık
     plt.xlabel(xlabel)
@@ -358,10 +363,6 @@ def main():
     print(*zip(rpms, torques), sep="\n")
     create_and_save_graph(torques, rpms, "rpm_vs_torque.png", "RPM vs Torque", "Torque (mNm)", "RPM")
 
-    print("Power vs Torque")
-    print(*zip(powers, torques), sep="\n")
-    create_and_save_graph(torques, powers, "power_vs_torque.png", "Power vs Torque", "Torque (mNm)", "Power (W)")
-
     print("Power Cons vs Torque")
     print(*zip(power_consumptions, torques), sep="\n")
     create_and_save_graph(torques, power_consumptions, "power_cons_vs_torque.png", "Power Consumption vs Torque", "Torque (mNm)", "Power Consumption (J)")
@@ -371,6 +372,10 @@ def main():
     print(*zip(power_consumptions, screw_speeds), sep="\n")
     create_and_save_graph(screw_speeds, power_consumptions, "power_cons_vs_screw_speed.png", "Power Consumption vs Screw Speed", "Screw Speed (mm/s)", "Power Consumption (J)")
 
+    print("Power vs Torque")
+    print(*zip(powers, torques), sep="\n")
+    create_and_save_graph(torques, powers, "power_vs_torque.png", "Power vs Torque", "Torque (mNm)", "Power (W)")
+
     print("Power vs Screw Speed")
     print(*zip(powers, screw_speeds), sep="\n")
     create_and_save_graph(screw_speeds, powers, "power_vs_screw_speed.png", "Power vs Screw Speed", "Screw Speed (mm/s)", "Power (W)")
@@ -379,11 +384,18 @@ def main():
     print(*zip(rpms, screw_speeds), sep="\n")
     create_and_save_graph(screw_speeds, rpms, "rpm_vs_screw_speed.png", "RPM vs Screw Speed", "Screw Speed (mm/s)", "RPM")
 
-    print("Screw Force vs Screw Speed")
+    print("RPM vs Screw Force")
     screw_forces = [get_screw_force(torque) for torque in torques]
+    print(*zip(rpms, screw_forces), sep="\n")
+    create_and_save_graph(screw_forces, rpms, "rpm_vs_screw_force.png", "RPM vs Screw Force", "RPM", "Screw Force (N)")
+
+    print("Torque vs Screw Force")
+    print(*zip(torques, screw_forces), sep="\n")
+    create_and_save_graph(screw_forces, torques, "torque_vs_screw_force.png", "Torque vs Screw Force", "Torque (mNm)", "Screw Force (N)")
+
+    print("Screw Force vs Screw Speed")
     print(*zip(screw_forces, screw_speeds), sep="\n")
     create_and_save_graph(screw_speeds, screw_forces, "screw_force_vs_screw_speed.png", "Screw Force vs Screw Speed", "Screw Speed (mm/s)", "Screw Force (N)")
-
 
 
 if __name__ == "__main__":
