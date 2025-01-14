@@ -12,7 +12,7 @@
 #define ENCODER_CPR 2400.
 #define POT_MIN 10
 #define POT_MAX 1000
-#define HOMING_SPEED 30
+#define HOMING_SPEED 40
 
 #define SCREW_PITCH_MM 5.
 #define SCREW_LEN_MM 50
@@ -259,11 +259,12 @@ void home_system() {
   lcd.setCursor(0, 0);
   lcd.print("Homing...");
   lcd.setCursor(0, 1);
-  lcd.print("Motor Speed: ");
+  lcd.print("Homing Speed: ");
   lcd.print(HOMING_SPEED);
 
   while (!is_limit_switch_pressed()) {
     // Serial.println("Waiting for limit switch");
+    set_motor_speed(-HOMING_SPEED);
     delay(10);
   }
 
