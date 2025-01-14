@@ -18,6 +18,21 @@
 #define SCREW_LEN_MM 50
 #define GEAR_RATIO 6.
 
+// rpm (tork=0)
+#define NO_LOAD_SPEED 5310.0
+
+// mNm (rpm=0)
+#define STALL_TORQUE 2420.395
+
+// A   (tork=0)
+#define NO_LOAD_CURRENT 2.5
+
+// A   (tork=stall_torque)
+#define STALL_CURRENT 131.227
+
+// V
+#define MOTOR_VOLTAGE 12.0
+
 
 // ENCODER
 volatile long enc_pos = 0L;
@@ -66,6 +81,13 @@ unsigned long motor_speed_read_interval = 10;
 long last_encoder_reading = 0;
 float current_rpm = 0;
 
+// -- Hesap katsayıları --
+// rpm/mNm
+const float motor_reg = NO_LOAD_SPEED / STALL_TORQUE;
+// A/mNm
+const float current_slope = (STALL_CURRENT - NO_LOAD_CURRENT) / STALL_TORQUE;
+
+
 void update_speed() {
   if (last_motor_speed_update == 0) {
     last_motor_speed_update = millis();
@@ -97,6 +119,30 @@ float get_rpm() {
   return current_rpm;
 }
 
+// [mNm]
+double get_torque_from_rpm(double rpm) {
+  return (NO_LOAD_SPEED - rpm) / motor_reg;
+}
+
+// [mm/s]
+double get_screw_speed(double rpm) {
+  return (rpm / 60.0) * (SCREW_PITCH_MM / GEAR_RATIO);
+}
+
+// [mNm]
+double get_screw_torque(double rpm) {
+  float torque_mnm = get_torque_from_rpm(rpm);
+  return torque_mnm * GEAR_RATIO;
+}
+
+double get_screw_force(double rpm) {
+  float screw_torque_Nm = get_screw_torque(rpm) / 1000;
+  double pitch_m = SCREW_PITCH_MM * 0.001; // Convert pitch from mm to m
+  double force_N = (2 * M_PI * screw_torque_Nm) / pitch_m; // F = 2πT / p
+  return force_N;
+}
+
+
 // SPEED READING END
 
 
@@ -120,27 +166,31 @@ void lcd_setup() {
   lcd.print(get_pot_input());
 }
 
-void lcd_update(float val1, float val2, float val3, float val4) {
+void lcd_update(
+  String val1_str, float val1, 
+  String val2_str, float val2, 
+  String val3_str, float val3, 
+  String val4_str, float val4
+  ) {
   if (millis() - last_lcd_update < lcd_update_interval) {
     return;
   }
   last_lcd_update = millis();
-
   // lcd.clear();
   lcd.setCursor(0, 0);
-  lcd.print("Speed Input: ");
+  lcd.print(val1_str);
   lcd.print(val1, 2);
   
   lcd.setCursor(0, 1);
-  lcd.print("Motor RPM: ");
+  lcd.print(val2_str);
   lcd.print(val2);
   
   lcd.setCursor(0, 2);
-  lcd.print("Screw Pos: ");
+  lcd.print(val3_str);
   lcd.print(val3);
   
   lcd.setCursor(0, 3);
-  lcd.print("Leg Angle: ");
+  lcd.print(val4_str);
   lcd.print(val4);
 
 }
@@ -184,7 +234,7 @@ float calculate_leg_angle(float screw_position) {
 
 // GENERAL FUNCTIONS
 float get_pot_input() {
-  float speed_input = map(analogRead(SPEED_POT_PIN), POT_MIN, POT_MAX, -255, 255);
+  float speed_input = map(-analogRead(SPEED_POT_PIN), POT_MIN, POT_MAX, -255, 255);
   return min(255, max(-255, speed_input));
 }
 
@@ -256,7 +306,24 @@ void loop() {
   }
   set_motor_speed(speed_input);
 
+  float rpm = get_rpm();
   float screw_pos = get_output_length();
-  lcd_update(speed_input, get_rpm(), screw_pos, calculate_leg_angle(screw_pos));
+  float screw_torque = get_screw_torque(rpm);
+  float screw_force = get_screw_force(rpm);
+
+  lcd_update(
+    "Speed Input: ",    speed_input,
+    "Motor RPM: ",      rpm,
+    "Screw Position: ", screw_pos,
+    "Screw Torque: ",   screw_torque
+  );
+
+  // lcd_update(
+  //   "Speed Input: ",    speed_input,
+  //   "Motor RPM: ",      rpm,
+  //   "Screw Torque: ",   screw_torque,
+  //   "Screw Force: ",    screq_force
+  // );
+
   update_speed();
 }
