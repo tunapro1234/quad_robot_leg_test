@@ -312,6 +312,8 @@ void loop() {
   float screw_torque = get_screw_torque(rpm);
   float screw_force = get_screw_force(rpm);
 
+  Serial.println(rpm);
+
   lcd_update(
     "Speed Input: ",    speed_input,
     "Motor RPM: ",      rpm,
