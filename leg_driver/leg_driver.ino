@@ -234,7 +234,7 @@ float calculate_leg_angle(float screw_position) {
 
 // GENERAL FUNCTIONS
 float get_pot_input() {
-  float speed_input = map(-analogRead(SPEED_POT_PIN), POT_MIN, POT_MAX, -255, 255);
+  float speed_input = -map(analogRead(SPEED_POT_PIN), POT_MIN, POT_MAX, -255, 255);
   return min(255, max(-255, speed_input));
 }
 
