@@ -324,6 +324,7 @@ def collect_data(update_interval_ms, loop_time_multiplier, current_step_per_sec)
     power_consumptions = []
     times = []
     rpms = []
+    currents = []
 
     # başlangıç akımımız 3 amper
     set_motor_current(3)
@@ -349,16 +350,17 @@ def collect_data(update_interval_ms, loop_time_multiplier, current_step_per_sec)
         powers.append(get_motor_power(motor_current_g))
         torques.append(get_motor_torque(motor_current_g))
         rpms.append(get_motor_rpm(motor_current_g))
+        currents.append(motor_current_g)
 
         times.append(sim_elapsed)
         total_power_consumption += powers[-1] * sim_elapsed
         power_consumptions.append(total_power_consumption)
 
-    return powers, torques, rpms, times, power_consumptions
+    return currents, powers, torques, rpms, times, power_consumptions
 
 
 def main():
-    powers, torques, rpms, _, power_consumptions = collect_data(8, 10, 8)
+    currents, powers, torques, rpms, times, power_consumptions = collect_data(8, 10, 8)
     print("RPM vs Torque")
     print(*zip(rpms, torques), sep="\n")
     create_and_save_graph(torques, rpms, "rpm_vs_torque.png", "RPM vs Torque", "Torque (mNm)", "RPM")
@@ -396,6 +398,11 @@ def main():
     print("Screw Force vs Screw Speed")
     print(*zip(screw_forces, screw_speeds), sep="\n")
     create_and_save_graph(screw_speeds, screw_forces, "screw_force_vs_screw_speed.png", "Screw Force vs Screw Speed", "Screw Speed (mm/s)", "Screw Force (N)")
+
+    print("\n\n")
+    print(*[f"{i:.2f}" for i in rpms], sep="\n")
+    print("\n\n")
+    print(*[f"{i:.2f}" for i in currents], sep="\n")
 
 
 if __name__ == "__main__":
